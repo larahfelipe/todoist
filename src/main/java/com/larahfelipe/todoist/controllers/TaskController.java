@@ -9,6 +9,7 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -89,7 +90,7 @@ public class TaskController {
 
     var userId = request.getAttribute(this.userIdKey);
 
-    if (taskExists.getUserId() != userId) {
+    if (!taskExists.getUserId().equals(userId)) {
       response.put(this.messageKey, "You are not allowed to update this task.");
 
       return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
@@ -101,6 +102,59 @@ public class TaskController {
 
     response.put(this.taskKey, updatedTask);
     response.put(this.messageKey, "Task updated successfully.");
+
+    return ResponseEntity.ok(response);
+  }
+
+  @DeleteMapping("/{taskId}")
+  public ResponseEntity<Map<String, Object>> delete(@PathVariable UUID taskId, HttpServletRequest request) {
+    Map<String, Object> response = new HashMap<>();
+
+    var taskExists = this.taskRepository.findById(taskId).orElse(null);
+
+    if (taskExists == null) {
+      response.put(this.messageKey, "Task with this id does not exist.");
+
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    var userId = request.getAttribute(this.userIdKey);
+
+    if (!taskExists.getUserId().equals(userId)) {
+      response.put(this.messageKey, "You are not allowed to delete this task.");
+
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
+    this.taskRepository.delete(taskExists);
+
+    response.put(this.messageKey, String.format("Task %s deleted successfully.", taskExists.getId()));
+
+    return ResponseEntity.ok(response);
+  }
+
+  @GetMapping("/{taskId}")
+  public ResponseEntity<Map<String, Object>> get(@PathVariable UUID taskId, HttpServletRequest request) {
+    Map<String, Object> response = new HashMap<>();
+    response.put(this.taskKey, null);
+
+    var taskExists = this.taskRepository.findById(taskId).orElse(null);
+
+    if (taskExists == null) {
+      response.put(this.messageKey, "Task with this id does not exist.");
+
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    var userId = request.getAttribute(this.userIdKey);
+
+    if (!taskExists.getUserId().equals(userId)) {
+      response.put(this.messageKey, "You are not allowed to access this task.");
+
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
+    response.put(this.taskKey, taskExists);
 
     return ResponseEntity.ok(response);
   }
